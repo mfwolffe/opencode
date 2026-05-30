@@ -415,10 +415,18 @@ export const ShellTool = Tool.define(
         { cwd, sessionID: ctx.sessionID, callID: ctx.callID },
         { env: {} },
       )
-      return {
+      const env: NodeJS.ProcessEnv = {
         ...process.env,
         ...extra.env,
+        // Prevent git from prompting for credentials or passwords — the shell
+        // tool runs non-interactively with stdin disconnected.
+        GIT_TERMINAL_PROMPT: "0",
       }
+      // Prevent GPG's pinentry-curses/tty from hijacking the terminal. Without
+      // this, pinentry opens /dev/tty directly and corrupts the TUI. GUI-based
+      // pinentry (pinentry-gnome3, pinentry-fltk, etc.) still works via DISPLAY.
+      delete env.GPG_TTY
+      return env
     })
 
     const run = Effect.fn("ShellTool.run")(function* (
